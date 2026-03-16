@@ -1,0 +1,53 @@
+[project]
+name = "artincam-editor"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.12.8"
+
+dependencies = [
+    "pillow>=12.1.1",
+    "pyside6>=6.10.2",
+    "xcffib>=1.12.0",
+]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.19.0",
+    "ruff>=0.15.6",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle errors (flake8)
+    "F", # pyflakes
+    "I", # isort
+]
+
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+combine-as-imports = true
+from-first = false
+lines-after-imports = 2
+
+# sections order
+section-order = [
+    "future",
+    "standard-library",
+    "first-party",
+    "third-party",
+    "local-folder",
+]
+
+# detect your project as first-party
+known-first-party = ["src"]
