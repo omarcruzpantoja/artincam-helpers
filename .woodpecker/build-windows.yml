@@ -2,7 +2,7 @@ when:
   - event: [push, manual]
 
 labels:
-  platform: windows/amd64
+  platform: linux/amd64
 
 steps:
   - name: build-windows
