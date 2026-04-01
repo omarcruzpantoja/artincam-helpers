@@ -132,13 +132,11 @@ package-linux-dir: build-linux-dir
 	mkdir -p $(PACKAGE_DIR)
 	tar -czf $(PACKAGE_DIR)/$(APP_NAME)-linux-x64-onedir.tar.gz -C $(DIST_DIR) $(APP_NAME)-linux
 
-package-windows: build-windows
-	mkdir -p $(PACKAGE_DIR)
-	cd $(DIST_DIR) && zip -j ../$(PACKAGE_DIR)/$(APP_NAME)-windows-x64.zip $(APP_NAME)-windows.exe
+package-windows-ps: build-windows
+	powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path '$(PACKAGE_DIR)' | Out-Null; Compress-Archive -Path '$(DIST_DIR)/$(APP_NAME)-windows.exe' -DestinationPath '$(PACKAGE_DIR)/$(APP_NAME)-windows-x64.zip' -Force"
 
-package-windows-dir: build-windows-dir
-	mkdir -p $(PACKAGE_DIR)
-	cd $(DIST_DIR) && zip -r ../$(PACKAGE_DIR)/$(APP_NAME)-windows-x64-onedir.zip $(APP_NAME)-windows
+package-windows-dir-ps: build-windows-dir
+	powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path '$(PACKAGE_DIR)' | Out-Null; Compress-Archive -Path '$(DIST_DIR)/$(APP_NAME)-windows/*' -DestinationPath '$(PACKAGE_DIR)/$(APP_NAME)-windows-x64-onedir.zip' -Force"
 
 rebuild-linux: clean build-linux
 rebuild-linux-dir: clean build-linux-dir

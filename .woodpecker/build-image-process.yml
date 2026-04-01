@@ -1,0 +1,32 @@
+when:
+  - event: [push, pull_request, manual]
+
+variables:
+  - &python_version "3.12"
+
+workflows:
+  linux-build:
+    platform: linux/amd64
+    steps:
+      - name: build-linux
+        image: python:3.12-bookworm
+        commands:
+          - python -m pip install --upgrade pip
+          - python -m pip install uv
+          - apt-get update
+          - apt-get install -y zip make
+          - uv sync --dev
+          - make package-linux
+          - ls -lah packages
+
+  windows-build:
+    platform: windows/amd64
+    steps:
+      - name: build-windows
+        image: powershell
+        commands:
+          - python -m pip install --upgrade pip
+          - python -m pip install uv
+          - uv sync --dev
+          - make package-windows-ps
+          - Get-ChildItem packages
