@@ -15,7 +15,7 @@ It can be packaged as a standalone executable using **PyInstaller**.
 
 ## Prototype Image Filters
 
-The **Prototype** tab allows you to experiment with color channel filters in real time.
+The **Prototype** tab allows you to experiment with color operations in real time and chain them into reusable pipelines.
 
 Features include:
 
@@ -23,21 +23,19 @@ Features include:
 
 * View **original image** and **processed preview** side-by-side
 
-* Apply preset filters:
+* Apply operation modes:
 
   * Grayscale
-  * Red pixels only
-  * Green pixels only
-  * Blue pixels only
-  * Custom RGB
+  * Custom RGB expression
 
-* Adjust RGB channel values using sliders
+* Build a multi-step pipeline by stacking operations
+* Reorder, remove, and edit pipeline steps
+* See cumulative stage previews for each pipeline step
+* Inspect the expected RGB output formula for the active operation
 
 * See live preview updates instantly
 
-The sliders represent **channel values or weights** depending on the selected filter.
-
-Example grayscale weights:
+Grayscale uses fixed weights:
 
 ```
 Red   = 30
@@ -49,13 +47,13 @@ Blue  = 11
 
 ## Batch Processing
 
-The **Batch Processing** tab allows you to apply your chosen filter to many images.
+The **Batch Processing** tab allows you to apply your chosen operation or committed pipeline to many images.
 
 Capabilities:
 
 * Select an input folder
 * Select an output folder
-* Apply the current filter configuration
+* Apply the current operation or committed pipeline configuration
 * Process all images in the directory
 * Save processed results automatically
 
