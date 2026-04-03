@@ -1,0 +1,28 @@
+when:
+  - event: tag
+    ref: refs/tags/*
+
+steps:
+  - name: build-linux
+    image: python:3.12-bookworm
+    commands:
+      - cd image-process
+      - python -m pip install --upgrade pip
+      - python -m pip install uv
+      - apt-get update
+      - apt-get install -y make zip
+      - uv sync --dev
+      - make package-linux
+      - ls -lah packages
+
+  - name: publish-github-release
+    image: woodpeckerci/plugin-release
+    settings:
+      api_key:
+        from_secret: github_release_token
+      files:
+        - image-process/packages/*.tar.gz
+      title: ${CI_COMMIT_TAG}
+      generate_release_notes: true
+    depends_on:
+      - build-linux
