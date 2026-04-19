@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import ast
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+import json
 from pathlib import Path
 import sys
 
@@ -42,6 +43,9 @@ GRAYSCALE_EXPR = f"({GRAYSCALE_WEIGHTS[0]}*r + {GRAYSCALE_WEIGHTS[1]}*g + {GRAYS
 
 MODE_GRAYSCALE = "grayscale"
 MODE_CUSTOM = "custom_rgb"
+CONFIG_FILE_EXTENSION = ".json"
+CONFIG_FILE_FILTER = "Pipeline Config (*.json)"
+CONFIG_VERSION = 1
 
 
 @dataclass(slots=True)
@@ -50,6 +54,32 @@ class PipelineOperation:
     red_expr: str
     green_expr: str
     blue_expr: str
+
+    def to_dict(self) -> dict[str, str]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: object) -> "PipelineOperation":
+        if not isinstance(data, dict):
+            raise ValueError("Each pipeline step must be an object.")
+
+        mode = data.get("mode")
+        red_expr = data.get("red_expr")
+        green_expr = data.get("green_expr")
+        blue_expr = data.get("blue_expr")
+
+        if mode not in {MODE_GRAYSCALE, MODE_CUSTOM}:
+            raise ValueError(f"Unsupported pipeline mode: {mode}")
+
+        if not all(isinstance(value, str) for value in (red_expr, green_expr, blue_expr)):
+            raise ValueError("Pipeline expressions must be strings.")
+
+        return cls(
+            mode=mode,
+            red_expr=red_expr,
+            green_expr=green_expr,
+            blue_expr=blue_expr,
+        )
 
 
 class ImageLabel(QLabel):
@@ -233,6 +263,14 @@ class MainWindow(QMainWindow):
         clear_pipeline_button = QPushButton("Clear Pipeline")
         clear_pipeline_button.clicked.connect(self.clear_pipeline)
         pipeline_buttons.addWidget(clear_pipeline_button, 2, 1)
+
+        import_config_button = QPushButton("Import Config")
+        import_config_button.clicked.connect(self.import_pipeline_config)
+        pipeline_buttons.addWidget(import_config_button, 3, 0)
+
+        export_config_button = QPushButton("Export Config")
+        export_config_button.clicked.connect(self.export_pipeline_config)
+        pipeline_buttons.addWidget(export_config_button, 3, 1)
 
         pipeline_layout.addLayout(pipeline_buttons)
         pipeline_layout.addWidget(self.pipeline_help_label)
@@ -480,6 +518,86 @@ class MainWindow(QMainWindow):
         if operation.mode == MODE_GRAYSCALE:
             return f"Grayscale ({GRAYSCALE_WEIGHTS[0]}/{GRAYSCALE_WEIGHTS[1]}/{GRAYSCALE_WEIGHTS[2]})"
         return f"Custom RGB (R={operation.red_expr}, G={operation.green_expr}, B={operation.blue_expr})"
+
+    def export_pipeline_config(self) -> None:
+        if not self.pipeline_operations:
+            QMessageBox.information(self, "No pipeline to export", "Add at least one committed pipeline step first.")
+            return
+
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export pipeline config",
+            str(Path.cwd() / f"pipeline-config{CONFIG_FILE_EXTENSION}"),
+            CONFIG_FILE_FILTER,
+        )
+        if not file_name:
+            return
+
+        path = Path(file_name)
+        if path.suffix.lower() != CONFIG_FILE_EXTENSION:
+            path = path.with_suffix(CONFIG_FILE_EXTENSION)
+
+        payload = {
+            "version": CONFIG_VERSION,
+            "pipeline_operations": [operation.to_dict() for operation in self.pipeline_operations],
+        }
+
+        try:
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except Exception as exc:
+            QMessageBox.critical(self, "Export failed", f"Could not write config file:\n{exc}")
+            return
+
+        QMessageBox.information(
+            self,
+            "Export complete",
+            f"Saved {len(self.pipeline_operations)} pipeline step(s) to:\n{path}",
+        )
+
+    def import_pipeline_config(self) -> None:
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import pipeline config",
+            "",
+            CONFIG_FILE_FILTER,
+        )
+        if not file_name:
+            return
+
+        path = Path(file_name)
+
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            operations = self.parse_pipeline_config_payload(payload)
+        except Exception as exc:
+            QMessageBox.critical(self, "Import failed", f"Could not load config file:\n{exc}")
+            return
+
+        self.pipeline_operations = operations
+        select_index = len(self.pipeline_operations) - 1 if self.pipeline_operations else None
+        self.refresh_pipeline_list(select_index=select_index)
+        self.refresh_filtered_image()
+        self.update_batch_settings_summary()
+
+        QMessageBox.information(
+            self,
+            "Import complete",
+            f"Loaded {len(self.pipeline_operations)} pipeline step(s) from:\n{path}",
+        )
+
+    def parse_pipeline_config_payload(self, payload: object) -> list[PipelineOperation]:
+        if not isinstance(payload, dict):
+            raise ValueError("The config file must contain a top-level object.")
+
+        version = payload.get("version")
+        if version != CONFIG_VERSION:
+            raise ValueError(f"Unsupported config version: {version}")
+
+        raw_operations = payload.get("pipeline_operations")
+        if not isinstance(raw_operations, list):
+            raise ValueError("The config file must contain a 'pipeline_operations' list.")
+
+        return [PipelineOperation.from_dict(item) for item in raw_operations]
 
     def open_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Select image folder")
